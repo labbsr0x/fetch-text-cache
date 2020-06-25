@@ -1,5 +1,6 @@
 const testserver = require('./testserver');
-const cacheableFetch = require('../cacheableFetch');
+const libCacheableFetch = require('../cacheableFetch');
+const cacheableFetch = libCacheableFetch();
 
 test('Delegates text request to fetch', finishTest => {
     const randomText = Math.random()+'';
@@ -72,4 +73,28 @@ test('Simulating a 3000ms response', finishTest => {
 
 test('Error on never hit data', () => {
     cacheableFetch('http://localhost:3333/').catch(e => expect(e).toBeDefined())
+});
+
+test('Delegates json request to fetch and custom persistence', finishTest => {
+    const expectedResult = {a:'another', b:'object'};
+    const map = {};
+    const cacheableCustomFetch = libCacheableFetch({
+        put:(k,v) => new Promise(resolve=>{
+            map[k] = v;
+            resolve();
+        }),
+        get:k => Promise.resolve(expectedResult),
+        contains:k => Promise.resolve(!!map[k])
+    });
+    const obj = {a:10, b:'abc'};
+    return testserver(JSON.stringify(obj), 'application/json', 200).then(server => {
+        cacheableCustomFetch('http://localhost:3333/').then(response => {
+            response.json().then(jsonResp => {
+                expect(jsonResp.a).toEqual('another')
+                expect(jsonResp.b).toEqual('object')
+            })
+            server.close();
+            finishTest();
+        })
+    })
 });

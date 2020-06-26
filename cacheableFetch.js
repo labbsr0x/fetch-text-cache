@@ -93,7 +93,11 @@ module.exports = function(options){
   function searchInCacheOnException(resource, persistenceControl, e){
     return persistenceControl.contains(resource).then(contains => {
       if(contains) {
-        return persistenceControl.get(resource).then(result => result.clone());
+        return persistenceControl.get(resource).then(result => {
+          const resp = result.clone();
+          resp.cached = true;
+          return resp;
+        });
       } else {
         throw e;
       }

@@ -1,15 +1,14 @@
 const {Readable} = require("stream");
+
 function createReadable(text){
   if(Readable.from){
-    return Redable.from(text);
+    return Readable.from(text);
   } else {
-    var read = 0;
-    return new Readable({
-      read(size){
-        text.slice(read, size);
-        read += size;
-      }
-    });
+    const readable = new Readable();
+		readable._read = function () {};
+		readable.push(text);
+		readable.push(null);
+		return readable;
   }
 }
 function isFunction(functionToCheck) {
@@ -111,9 +110,7 @@ module.exports = function(options){
             });
           });
         } else {
-          return new Promise(resolve => {
-            resolve(response);
-          });
+          return Promise.resolve(response)
         }
       }).catch(e => {
         return searchInCacheOnException(resource, persistenceControl, e);

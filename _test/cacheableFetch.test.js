@@ -58,9 +58,10 @@ test('Fetch cached json', finishTest => {
 });
 
 test('Simulating a 3000ms response', finishTest => {
+    const randomText = Math.random()+'';
     return testserver(new Promise(resolve => {
         setTimeout(()=>{
-            resolve(Math.random()+'');
+            resolve(randomText);
         }, 3000);
     }), 'text/plain', 200).then(server => {
         cacheableFetch('http://localhost:3333/').then(response => {

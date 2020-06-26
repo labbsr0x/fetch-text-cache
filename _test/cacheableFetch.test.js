@@ -40,6 +40,19 @@ test('Fetch cached text', finishTest => {
     })
 });
 
+test('Fetch cached text has headers', finishTest => {
+    return testserver(Math.random()+'', 'text/plain', 200).then(server => {
+        cacheableFetch('http://localhost:3333/').then(responseOnline => {
+            const expected = JSON.stringify(responseOnline.headers.raw());
+            server.close();
+            cacheableFetch('http://localhost:3333/').then(responseCached => {
+                responseCached.text().then(text => expect(JSON.stringify(responseCached.headers.raw())).toEqual(expected))
+                finishTest();
+            });
+        })
+    })
+});
+
 test('Fetch cached json', finishTest => {
     const obj = {a:10, b:'abc'};
     return testserver(JSON.stringify(obj), 'application/json', 200).then(server => {

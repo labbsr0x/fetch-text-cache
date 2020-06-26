@@ -103,12 +103,16 @@ module.exports = function(options){
     try {
       return fetch(resource, init).then(response => {
         if(response.ok) {
-          return response.text().then(text => {
-            persistenceControl.put(resource, new Response(createReadable(text)));
-            return new Promise(resolve => {
-              resolve(persistenceControl.get(resource));
-            });
-          });
+          return response.text().then(text => persistenceControl.put(resource, 
+            new Response(createReadable(text), {
+              url: response.url,
+              status: response.status,
+              statusText: response.statusText,
+              headers: response.headers,
+              ok: response.ok,
+              redirected: response.redirected
+            }
+          )).then(()=>persistenceControl.get(resource)))
         } else {
           return Promise.resolve(response)
         }

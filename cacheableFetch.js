@@ -1,16 +1,3 @@
-const {Readable} = require("stream");
-
-function createReadable(text){
-  if(Readable.from){
-    return Readable.from(text);
-  } else {
-    const readable = new Readable();
-		readable._read = function () {};
-		readable.push(text);
-		readable.push(null);
-		return readable;
-  }
-}
 function isFunction(functionToCheck) {
   return functionToCheck && {}.toString.call(functionToCheck) === '[object Function]';
 }
@@ -19,21 +6,34 @@ function isPromise(functionToCheck) {
   return functionToCheck && ({}.toString.call(functionToCheck) === '[object Promise]' || isFunction(functionToCheck.then));
 }
 
-if(!fetch){
-  try{
-    require.resolve('node-fetch')
-    var fetch = require('node-fetch');
-    var Response = fetch.Response;
-  }catch(e){
-    console.error("nor fetch nor node-fetch is found!");
-    process.exit(e.code);
-  }
+function extractMetaInfo(original) {
+  return {
+    url: original.url,
+    status: original.status,
+    statusText: original.statusText,
+    headers: original.headers,
+    ok: original.ok,
+    redirected: original.redirected
+  };
 }
 
-module.exports = function(options){
+const PreferableMode = {
+  CACHE:'CACHE',
+  ONLINE:'ONLINE',
+  DEFAULT:'DEFAULT'
+};
+
+module.exports = function(fetch, options){
+
+  function assembleResponse(serializable){
+    const RespClass = fetch.Response || Response;
+    return new RespClass(serializable.text, extractMetaInfo(serializable));
+  }
+  
   const persistenceControl = (function(){
     let result = null;
-    if(options && options.persistenceControl){
+
+    if(options && options.persistenceControl) {
       if(!options.persistenceControl.get || !options.persistenceControl.put ||
           !options.persistenceControl.contains) {
         throw new Error('Persistence Control should have the following methods get,put and contains');
@@ -42,6 +42,7 @@ module.exports = function(options){
         result = {get:pc.get, put:pc.put, contains:pc.contains}
       }
     }
+    
     if(result == null){
       const _store = {};
       result = {
@@ -67,64 +68,98 @@ module.exports = function(options){
       },
       get: (k) => {
         return new Promise(resolve => {
-          if(isPromise(result.get)){
-            result.get(k).then((v)=>{
+          const v1 = result.get(k);
+          if(isPromise(v1)){
+            v1.then((v)=>{
               resolve(v);
             })
           } else {
-            resolve(result.get(k));
+            resolve(v1);
           }
         })
       },
-      contains: (k,v) => {
+      contains: (k) => {
         return new Promise(resolve => {
-          if(isPromise(result.contains)){
-            result.contains(k).then((v)=>{
+          const v1 = result.contains(k);
+          if(isPromise(v1)) {
+            v1.then(v => {
               resolve(v);
             })
           } else {
-            resolve(!!result.contains(k));
+            resolve(!!v1);
           }
         })
       }
     }
   })();
 
-  function searchInCacheOnException(resource, persistenceControl, e){
+  function throwOrNull(e){
+    if(e){
+      throw e;
+    }else{
+      return null;
+    }
+  }
+
+  function searchInCacheOtThrowException(resource, e){
     return persistenceControl.contains(resource).then(contains => {
       if(contains) {
-        return persistenceControl.get(resource).then(result => {
-          const resp = result.clone();
-          resp.cached = true;
-          return resp;
+        return persistenceControl.get(resource).then(serialized => {
+          if(serialized){
+            const resp = assembleResponse(serialized);
+            resp.cached = true;
+            return resp;
+          }else{
+            return throwOrNull(e);
+          }
         });
       } else {
-        throw e;
+        return throwOrNull(e);
       }
     });
   }
+
+  function fetchOnline(resource, init){
+    return fetch(resource, init).then(response => {
+      if(response.ok) {
+        return response.text().then(text => {
+          const serializable = extractMetaInfo(response);
+          serializable.text = text;
+          return persistenceControl
+                  .put(resource, serializable)
+                  .then(()=> assembleResponse(serializable))
+        })
+      } else {
+        return Promise.resolve(response)
+      }
+    })
+    .catch(e => {
+      return searchInCacheOtThrowException(resource, e);
+    });
+  }
+
+  function fetchFromCache(resource, init){
+    return searchInCacheOtThrowException(resource)
+      .then(resp => {
+        if(resp){
+          return resp;
+        }else{
+          return fetchOnline(resource, init);
+        }
+      });
+  }
+
   return function cacheableFetch(resource, init) {
     try {
-      return fetch(resource, init).then(response => {
-        if(response.ok) {
-          return response.text().then(text => persistenceControl.put(resource, 
-            new Response(createReadable(text), {
-              url: response.url,
-              status: response.status,
-              statusText: response.statusText,
-              headers: response.headers,
-              ok: response.ok,
-              redirected: response.redirected
-            }
-          )).then(()=>persistenceControl.get(resource)))
-        } else {
-          return Promise.resolve(response)
-        }
-      }).catch(e => {
-        return searchInCacheOnException(resource, persistenceControl, e);
-      });
+      if(options && options.preferableMode === PreferableMode.CACHE){
+        return fetchFromCache(resource, init);
+      }else{
+        return fetchOnline(resource, init)
+      }
     } catch(e) {
-      return searchInCacheOnException(resource, persistenceControl, e);
+      return searchInCacheOtThrowException(resource, e);
     }
   }
 };
+
+module.exports.PreferableMode = PreferableMode;

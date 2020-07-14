@@ -1,6 +1,6 @@
 {
   "name": "fetch-text-cache",
-  "version": "0.0.2",
+  "version": "0.0.10",
   "description": "A library to enable users to cache requests",
   "main": "cacheableFetch.js",
   "scripts": {
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/moreira/-fetch-text-cache.git"
+    "url": "git+https://github.com/labbsr0x/fetch-text-cache.git"
   },
   "keywords": [
     "fetch",
@@ -17,15 +17,14 @@
   "author": "Guilherme Moreira",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/moreira/-fetch-text-cache/issues"
+    "url": "https://github.com/labbsr0x/fetch-text-cache/issues"
   },
-  "homepage": "https://github.com/moreira/-fetch-text-cache#readme",
-  "dependencies": {
-    "node-fetch": "^2.6.0"
-  },
+  "homepage": "https://github.com/labbsr0x/fetch-text-cache#readme",
+  "dependencies": {},
   "devDependencies": {
     "jest": "^24.0.0",
-    "tiny-http-server": "0.2.0"
+    "tiny-http-server": "0.2.0",
+    "node-fetch": "^2.6.0"
   },
   "jest": {
     "testEnvironment": "node",

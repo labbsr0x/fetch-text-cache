@@ -31,7 +31,7 @@ cachedFetch('http://localhost:4343/').then(resp => {
 
 ```
 const map = {};
-const customPersistence = {
+const persistenceControl = {
     put:(k,v) => new Promise(resolve=>{
         map[k] = v;
         resolve();
@@ -40,7 +40,7 @@ const customPersistence = {
     contains:k => Promise.resolve(!!map[k])
 }
 
-const cachedFetch = require('fetch-text-cache')(fetch,{customPersistence});
+const cachedFetch = require('fetch-text-cache')(fetch,{persistenceControl});
 
 cachedFetch('http://localhost:4343/').then(resp => {
     resp.text().then(text => {

@@ -101,7 +101,7 @@ module.exports = function(fetch, options){
     }
   }
 
-  function searchInCacheOtThrowException(resource, e){
+  function searchInCacheOrThrowException(resource, e){
     return persistenceControl.contains(resource).then(contains => {
       if(contains) {
         return persistenceControl.get(resource).then(serialized => {
@@ -130,23 +130,17 @@ module.exports = function(fetch, options){
                   .then(()=> assembleResponse(serializable))
         })
       } else {
-        return Promise.resolve(response)
+        return searchInCacheOrThrowException(resource).then(cached => cached || response);
       }
     })
     .catch(e => {
-      return searchInCacheOtThrowException(resource, e);
+      return searchInCacheOrThrowException(resource, e);
     });
   }
 
-  function fetchFromCache(resource, init){
-    return searchInCacheOtThrowException(resource)
-      .then(resp => {
-        if(resp){
-          return resp;
-        }else{
-          return fetchOnline(resource, init);
-        }
-      });
+  function fetchFromCache(resource, init) {
+    return searchInCacheOrThrowException(resource)
+        .then(cached => cached ? cached : fetchOnline(resource, init));
   }
 
   return function cacheableFetch(resource, init) {
@@ -157,7 +151,7 @@ module.exports = function(fetch, options){
         return fetchOnline(resource, init)
       }
     } catch(e) {
-      return searchInCacheOtThrowException(resource, e);
+      return searchInCacheOrThrowException(resource, e);
     }
   }
 };

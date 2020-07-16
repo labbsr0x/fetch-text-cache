@@ -16,7 +16,7 @@ All requests are done using `fetch`, if the requests returns an **OK** response,
 Using `fetch-text-cache` should be identical to use `fetch`, except for the import.
 
 ```
-const cachedFetch = require('fetch-text-cache')();
+const cachedFetch = require('fetch-text-cache')(fetch);
 
 cachedFetch('http://localhost:4343/').then(resp => {
     resp.text().then(text => {
@@ -40,7 +40,7 @@ const customPersistence = {
     contains:k => Promise.resolve(!!map[k])
 }
 
-const cachedFetch = require('fetch-text-cache')({customPersistence});
+const cachedFetch = require('fetch-text-cache')(fetch,{customPersistence});
 
 cachedFetch('http://localhost:4343/').then(resp => {
     resp.text().then(text => {
@@ -57,7 +57,7 @@ The `preferableMode` is used to set which is the first option where `fetch-text-
 * PreferableMode.CACHE: it searches first in cache, if it doesn't find, then tries to online fetch;
 
 ```
-const cachedFetch = require('fetch-text-cache')({
+const cachedFetch = require('fetch-text-cache')(fetch,{
     preferableMode: libCacheableFetch.PreferableMode.CACHE
 });
 

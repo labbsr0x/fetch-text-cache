@@ -1,5 +1,5 @@
 {
-  "name": "fetch-text-cache",
+  "name": "@labbsr0x/fetch-text-cache",
   "version": "0.0.10",
   "description": "A library to enable users to cache requests",
   "main": "cacheableFetch.js",
